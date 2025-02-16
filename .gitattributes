@@ -1,2 +1,75 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+import time
+import os
+
+# Groups to track
+groups = {
+    "terrorist_organizations": ["hamas", "hezbollah", "isis", "al-qaeda", "taliban", "boko haram", "green beret"],
+    "political_movements": ["free palestine", "blm", "antifa", "maga"],
+}
+
+# List to store suspected users
+suspected_users = []
+
+# Setup Selenium with Chrome (Headless Mode)
+options = webdriver.ChromeOptions()
+options.add_argument("--headless")  # Runs in background
+options.add_argument("--disable-gpu")
+options.add_argument("--no-sandbox")
+
+driver = webdriver.Chrome(options=options)
+
+# Open Twitter/X search page
+url = "https://x.com/search?q=free%20palestine&src=typed_query&f=live"
+driver.get(url)
+
+# Allow time for the page to load
+time.sleep(5)
+
+# Infinite loop to keep scrolling and checking the page
+while True:
+    # Get page source after scrolling (before detection)
+    html = driver.page_source.lower()
+
+    print("Checking the page...")
+
+    # Check for mentions in each category
+    for category, keywords in groups.items():
+        for keyword in keywords:
+            if keyword in html:
+                if category == "terrorist_organizations":
+                    suspected_users.append(f"Possible terrorist supporter (found: {keyword})")
+                elif category == "political_movements":
+                    suspected_users.append(f"Supports political movement (found: {keyword})")
+
+    # Print results
+    if suspected_users:
+        print("\n🚨 Suspected users detected:")
+        for user in suspected_users:
+            print(f"- {user}")
+    else:
+        print("No suspected users found.")
+
+    # Scroll down to load more content
+    driver.find_element(By.TAG_NAME, "body").send_keys(Keys.PAGE_DOWN)
+    time.sleep(10)  # Wait for new content to load
+
+    print(suspected_users)
+
+    # Define the folder path (make sure this folder exists or create it)
+    folder_path = "ter"  # Replace with your folder's path
+
+    # Create the folder if it doesn't exist
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Define the file path where you want to save the list
+    file_path = os.path.join(folder_path, 'suspected_users')
+
+    # Write the list to the file
+    with open(file_path, 'w') as file:
+        for item in suspected_users:
+            file.write(f"{item}\n")
+
+    print(f"List saved to {file_path}")
